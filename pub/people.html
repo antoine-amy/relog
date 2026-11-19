@@ -1,0 +1,24 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+
+<div class="people-table">
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Username</th>
+        <th>E-Mail</th>
+        <th>Role</th>
+    </tr>
+    {%- for p in people -%}
+    <tr>
+        <td><a href="/people/{{ p['user'] }}">{{ p['name'] }}</a></td>
+        <td>{{ p['user'] }}</td>
+        <td><a href="mailto:{{ p['email'] }}">{{ p['email'] }}</a></td>
+        <td>{{ p['role'] }}</td>
+    </tr>
+    {%- endfor -%}
+</table>
+</div>
+
+{% endblock %}

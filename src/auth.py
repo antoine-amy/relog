@@ -48,22 +48,17 @@ def session_key(instance_path):
 
 
 class User(UserMixin):
-    def __init__(self, name, user, email, active=False, accent='neutral', show_archived=False):
+    def __init__(self, name, user, email, role='pending', accent='neutral', show_archived=False):
         self.name = name
         self.user = user
         self.email = email
-        self.active = active
+        self.role = role
         self.accent = accent if accent in ACCENT_OPTIONS else 'neutral'
         self.show_archived = bool(show_archived)
 
+    @property
     def is_active(self):
-        return self.active
-
-    def is_anonymous(self):
-        return False
-
-    def is_authenticated(self):
-        return True
+        return self.role != 'pending'
 
     def get_id(self):
         return self.user
@@ -82,21 +77,23 @@ def login():
 def login_post():
     email = request.form.get('email', '').strip().lower()
     password = request.form.get('password', '')
+    destination = 'home' if request.form.get('from_home') == '1' else 'auth.login'
     # remember = True if request.form.get('remember') else False
 
     with get_db() as conn:
-        user = conn.execute("SELECT * FROM people WHERE user = ? OR email = ?", (email, email)).fetchone()
+        user = conn.execute("SELECT * FROM people WHERE user = ? COLLATE NOCASE OR email = ? COLLATE NOCASE", (email, email)).fetchone()
 
     if not user or not password or not check_password_hash(user['password'], password):
         flash('Please check your username or email and password, then try again.')
-        destination = 'home' if request.form.get('from_home') == '1' else 'auth.login'
         return redirect(url_for(destination))
 
     u = User(
         user['name'], user['user'], user['email'],
-        active=user['role'] != 'pending', accent=user['accent'], show_archived=user['show_archived'],
+        role=user['role'], accent=user['accent'], show_archived=user['show_archived'],
     )
-    login_user(u, remember=True)
+    if not login_user(u, remember=True):
+        flash('Your account is awaiting approval.')
+        return redirect(url_for(destination))
     # TODO redirect to previous page found in 'next' param
     return redirect('/')
 
@@ -134,11 +131,16 @@ def signup_post():
 
     return redirect(url_for('auth.login'))
 
+def ensure_account_form_token():
+    if 'account_form_token' not in session:
+        session['account_form_token'] = token_urlsafe(32)
+
+
 def validate_account_form():
     token = session.get('account_form_token')
     submitted_token = request.form.get('account_form_token', '')
     if not token or not compare_digest(token.encode(), submitted_token.encode()):
-        abort(400, 'Reload account settings and try again.')
+        abort(400, 'Reload the page and try again.')
 
 
 @auth.route('/account', methods=['GET', 'POST'])
@@ -160,8 +162,7 @@ def account():
         flash('Settings saved.')
         return redirect(url_for('auth.account'))
 
-    if 'account_form_token' not in session:
-        session['account_form_token'] = token_urlsafe(32)
+    ensure_account_form_token()
     return render_template('account.html', title='Settings', accents=ACCENT_OPTIONS)
 
 

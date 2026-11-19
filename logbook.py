@@ -20,6 +20,7 @@ from flask_login import LoginManager, current_user, login_required
 
 from src.cal import count_days, month_view
 from src.auth import ACCENT_OPTIONS, auth, session_key, User
+from src.people import people
 
 
 app = Flask(__name__, static_folder='static', template_folder="pub")
@@ -31,6 +32,7 @@ login_manager.login_view = 'auth.login'
 login_manager.init_app(app)
 
 app.register_blueprint(auth)
+app.register_blueprint(people)
 
 PUBLIC_ENDPOINTS = {'home', 'auth.login', 'auth.login_post', 'auth.signup', 'auth.signup_post'}
 PUBLIC_ASSETS = {
@@ -145,7 +147,7 @@ def load_user(id):
         return None
     return User(
         user['name'], user['user'], user['email'],
-        active=user['role'] != 'pending', accent=user['accent'], show_archived=user['show_archived'],
+        role=user['role'], accent=user['accent'], show_archived=user['show_archived'],
     )
 
 

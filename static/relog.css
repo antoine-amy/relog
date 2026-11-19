@@ -1121,3 +1121,11 @@ a.calendar-day-selected:hover {
     grid-column: 2;
   }
 }
+
+.people-table {
+  overflow-x: auto;
+}
+
+.people-table table {
+  width: 100%;
+}
